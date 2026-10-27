@@ -85,3 +85,109 @@ def key_expansion(key_bytes):
             temp[0] ^= RCON[i // 4]
         w.append([w[i - 4][j] ^ temp[j] for j in range(4)])
     return w
+
+def bytes_to_state(block):
+    return [[block[r + 4 * c] for c in range(4)] for r in range(4)]
+
+
+def state_to_bytes(state):
+    return bytes(state[r][c] for c in range(4) for r in range(4))
+
+
+def add_round_key(state, w, round_idx):
+    for c in range(4):
+        for r in range(4):
+            state[r][c] ^= w[round_idx * 4 + c][r]
+
+
+def sub_bytes(state):
+    for r in range(4):
+        for c in range(4):
+            state[r][c] = S_BOX[state[r][c]]
+
+
+def inv_sub_bytes(state):
+    for r in range(4):
+        for c in range(4):
+            state[r][c] = INV_S_BOX[state[r][c]]
+
+
+def shift_rows(state):
+    state[1] = state[1][1:] + state[1][:1]
+    state[2] = state[2][2:] + state[2][:2]
+    state[3] = state[3][3:] + state[3][:3]
+
+
+def inv_shift_rows(state):
+    state[1] = state[1][-1:] + state[1][:-1]
+    state[2] = state[2][-2:] + state[2][:-2]
+    state[3] = state[3][-3:] + state[3][:-3]
+
+
+def mix_columns(state):
+    for c in range(4):
+        a = [state[r][c] for r in range(4)]
+        state[0][c] = gmul(a[0], 2) ^ gmul(a[1], 3) ^ a[2] ^ a[3]
+        state[1][c] = a[0] ^ gmul(a[1], 2) ^ gmul(a[2], 3) ^ a[3]
+        state[2][c] = a[0] ^ a[1] ^ gmul(a[2], 2) ^ gmul(a[3], 3)
+        state[3][c] = gmul(a[0], 3) ^ a[1] ^ a[2] ^ gmul(a[3], 2)
+
+
+def inv_mix_columns(state):
+    for c in range(4):
+        a = [state[r][c] for r in range(4)]
+        state[0][c] = gmul(a[0], 14) ^ gmul(a[1], 11) ^ gmul(a[2], 13) ^ gmul(a[3], 9)
+        state[1][c] = gmul(a[0], 9) ^ gmul(a[1], 14) ^ gmul(a[2], 11) ^ gmul(a[3], 13)
+        state[2][c] = gmul(a[0], 13) ^ gmul(a[1], 9) ^ gmul(a[2], 14) ^ gmul(a[3], 11)
+        state[3][c] = gmul(a[0], 11) ^ gmul(a[1], 13) ^ gmul(a[2], 9) ^ gmul(a[3], 14)
+
+
+def encrypt_block(block, w):
+    state = bytes_to_state(block)
+    add_round_key(state, w, 0)
+    for round_idx in range(1, 10):
+        sub_bytes(state)
+        shift_rows(state)
+        mix_columns(state)
+        add_round_key(state, w, round_idx)
+    sub_bytes(state)
+    shift_rows(state)
+    add_round_key(state, w, 10)
+    return state_to_bytes(state)
+
+
+def decrypt_block(block, w):
+    state = bytes_to_state(block)
+    add_round_key(state, w, 10)
+    for round_idx in range(9, 0, -1):
+        inv_shift_rows(state)
+        inv_sub_bytes(state)
+        add_round_key(state, w, round_idx)
+        inv_mix_columns(state)
+    inv_shift_rows(state)
+    inv_sub_bytes(state)
+    add_round_key(state, w, 0)
+    return state_to_bytes(state)
+
+
+def encrypt(plaintext_ascii, key_ascii):
+    key_bytes = normalize_key(key_ascii)
+    w = key_expansion(key_bytes)
+    padded_data = pad_pkcs7(plaintext_ascii.encode('utf-8'))
+    encrypted_bytes = bytearray()
+    for i in range(0, len(padded_data), 16):
+        encrypted_bytes.extend(encrypt_block(padded_data[i : i + 16], w))
+    return encrypted_bytes.hex()
+
+
+def decrypt(ciphertext_hex, key_ascii):
+    key_bytes = normalize_key(key_ascii)
+    w = key_expansion(key_bytes)
+    cipher_bytes = bytes.fromhex(ciphertext_hex.strip())
+    if len(cipher_bytes) % 16 != 0:
+        raise ValueError("Ciphertext Hex bukan kelipatan 16 byte")
+    decrypted_padded = bytearray()
+    for i in range(0, len(cipher_bytes), 16):
+        decrypted_padded.extend(decrypt_block(cipher_bytes[i : i + 16], w))
+    unpadded = unpad_pkcs7(bytes(decrypted_padded))
+    return unpadded.decode('utf-8')

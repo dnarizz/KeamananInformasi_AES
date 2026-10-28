@@ -7,8 +7,8 @@ Repositori ini berisi implementasi dari nol (*from scratch*) algoritma kriptogra
 ## 👥 Anggota Kelompok
 | Nama Lengkap | NRP | Peran & Kontribusi |
 | :--- | :--- | :--- |
-| **[Nama Anda]** | **[NRP Anda]** | Implementasi algoritma AES-128 manual (`aes.py`), Integrasi Alice & KDC, Pengujian Wireshark |
-| **[Nama Teman Kelompok]** | **[NRP Teman]** | Implementasi Server KDC (`kdc.py`), Komunikasi Dua Arah Peer Node (`node.py`), Dokumentasi |
+| **Danar Rizkia Yuda** | **5025241128** | Implementasi algoritma AES-128 manual (`aes.py`), Integrasi Alice & KDC, Pengujian Wireshark |
+| **Muhammad Cholaif Al Ghifari** | **5025241210** | Implementasi Server KDC (`kdc.py`), Komunikasi Dua Arah Peer Node (`node.py`), Dokumentasi |
 
 ---
 
